@@ -13,10 +13,15 @@ app = Flask(__name__)
 API_KEY = os.environ.get("GEMINI_API_KEY")
 
 def extract_video_id(url):
-    # 유튜브 URL에서 11자리 비디오 ID만 정규식으로 추출
-    pattern = r'(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})'
+    # 유튜브 일반 링크, 모바일, 쇼츠(Shorts), 공유 링크 등 모든 형태 지원
+    pattern = r'(?:https?:\/\/)?(?:www\.|m\.)?(?:youtube\.com\/(?:watch\?.*v=|shorts\/|embed\/|v\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})'
     match = re.search(pattern, url)
-    return match.group(1) if match else None
+    if match:
+        return match.group(1)
+        
+    # 혹시 모를 다른 형태의 링크를 대비한 추가 검색
+    fallback_match = re.search(r'(?:v=|\/)([a-zA-Z0-9_-]{11})', url)
+    return fallback_match.group(1) if fallback_match else None
 
 def get_youtube_transcript(video_id):
     try:
