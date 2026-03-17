@@ -25,12 +25,23 @@ def extract_video_id(url):
 
 def get_youtube_transcript(video_id):
     try:
-        # 우선 한국어 자막 시도, 없으면 기본 생성 자막에서 텍스트 합치기
-        transcript_list = YouTubeTranscriptApi.get_transcript(video_id, languages=['ko', 'en'])
-        text = " ".join([t['text'] for t in transcript_list])
+        # 자막 리스트 우선 확보 (자동생성 자막도 포함)
+        transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
+        
+        # 1. 한국어, 영어, 자동생성된 자막 순서대로 샅샅이 뒤져서 하나라도 찾아냄
+        try:
+            transcript = transcript_list.find_transcript(['ko', 'en', 'ko-KR', 'en-US'])
+        except:
+            # 2. 정 없으면 리스트에 잡히는 첫 번째 자막(다른 언어나 기본 자동생성)을 가져옴 (어차피 AI가 번역해줍니다!)
+            transcript = list(transcript_list)[0]
+            
+        text = " ".join([t['text'] for t in transcript.fetch()])
         return text
     except Exception as e:
-        return None
+        # 에러 종류를 정확히 파악하기 위해 출력 (Vercel 로그에 남음)
+        print(f"Transcript Error: {str(e)}")
+        # 실패 시 에러 사유를 반환하게 수정
+        return f"ERROR_DETAIL: {str(e)}"
 
 def analyze_recipe(transcript_text):
     if not API_KEY:
@@ -137,8 +148,9 @@ def home():
         return render_template_string(HTML_TEMPLATE, url=url, error="유효한 유튜브 링크가 아닙니다. 링크를 다시 확인해주세요.")
         
     transcript = get_youtube_transcript(video_id)
-    if not transcript:
-        return render_template_string(HTML_TEMPLATE, url=url, error="이 영상에서 자막을 가져올 수 없습니다. 쇼츠나 자막(CC)이 아예 없는 영상일 수 있습니다.")
+    if not transcript or transcript.startswith("ERROR_DETAIL:"):
+        error_msg = transcript.replace("ERROR_DETAIL: ", "") if transcript else "알 수 없는 에러가 발생했습니다."
+        return render_template_string(HTML_TEMPLATE, url=url, error=f"이 영상에서 자막을 가져올 수 없습니다. 쇼츠나 자막(CC)이 꺼져있을 수 있습니다. 상세 이유: {error_msg}")
         
     result = analyze_recipe(transcript)
     if result["success"]:
