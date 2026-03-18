@@ -38,10 +38,16 @@ def get_youtube_transcript(video_id):
         text = " ".join([t['text'] for t in transcript.fetch()])
         return text
     except Exception as e:
-        # 에러 종류를 정확히 파악하기 위해 출력 (Vercel 로그에 남음)
-        print(f"Transcript Error: {str(e)}")
-        # 실패 시 에러 사유를 반환하게 수정
-        return f"ERROR_DETAIL: {str(e)}"
+        error_str = str(e)
+        print(f"Transcript Error: {error_str}")
+        
+        # 대표적인 에러 처리 안내 문구
+        if "Subtitles are disabled" in error_str or "No transcripts were found" in error_str:
+            return "ERROR_DETAIL: 영상에 [CC 자막]이 없거나, 유튜버가 하드코딩한 자막입니다. 아니면 연령 제한 영상일 수 있습니다."
+        elif "TranscriptsDisabled" in error_str:
+            return "ERROR_DETAIL: 해당 영상은 자막 기능이 꺼져있거나 제공되지 않습니다."
+        else:
+            return f"ERROR_DETAIL: 자막 데이터에 접근할 수 없습니다. (알 수 없는 오류)"
 
 def analyze_recipe(transcript_text):
     if not API_KEY:
