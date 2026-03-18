@@ -43,16 +43,14 @@ def get_youtube_transcript(video_id):
         print(f"Transcript Error [{error_type}]: {error_str}")
         
         # 대표적인 에러 처리 안내 문구
-        if error_type == "TranscriptsDisabled":
-            return "ERROR_DETAIL: 해당 영상은 자막 기능이 꺼져있습니다. (유튜버가 추출 가능한 자막 기능을 막아둠)"
-        elif error_type == "NoTranscriptFound":
-            return "ERROR_DETAIL: 해당 영상에서 열람 가능한 자막을 찾을 수 없습니다. (하드코딩 자막이거나 연령 제한 영상일 수 있습니다.)"
+        if error_type in ["TranscriptsDisabled", "NoTranscriptFound", "AttributeError"]:
+            return "ERROR_DETAIL: 해당 영상에 열람 가능한 [CC 자막]이 없거나, 쇼츠(Shorts) 등 추출이 불가능한 구조의 영상입니다. (유튜버가 직접 입힌 자막은 가져올 수 없습니다.)"
         elif error_type == "VideoUnavailable":
             return "ERROR_DETAIL: 비공개되거나 삭제된 영상입니다."
         elif "Subtitles are" in error_str or "No transcripts" in error_str:
             return "ERROR_DETAIL: 영상에 [CC 자막]이 없거나 제공되지 않습니다."
         else:
-            return f"ERROR_DETAIL: 자막 시스템 접근에 실패했습니다. (사유: {error_type})"
+            return f"ERROR_DETAIL: 자막 데이터 접근 실패 (특이 에러 발생: {error_type})"
 
 def analyze_recipe(transcript_text):
     if not API_KEY:
